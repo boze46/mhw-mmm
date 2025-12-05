@@ -21,6 +21,12 @@ pub fn run() {
             commands::load_all_mods,
             commands::select_game_directory,
             commands::select_archive_file,
+            commands::preview_zip_archive,
+            commands::extract_zip_archive,
+            commands::copy_mod_to_game,
+            commands::remove_mod_from_game,
+            commands::delete_directory,
+            commands::get_directory_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

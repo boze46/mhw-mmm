@@ -1,18 +1,43 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import "@/style.css"
 import { Button } from '@/components/ui/button'
+import ModTable from '@/components/ModTable.vue'
 import { useModManager } from './composables/useModManager'
+import type { Mod } from '@/types/mod'
 
-const { config, loadConfig, saveConfig, selectGameDirectory } = useModManager()
+const { config, mods, loading, loadConfig, saveConfig, loadAllMods, selectGameDirectory } = useModManager()
 const showSetupDialog = ref(false)
 const selectedPath = ref('')
+
+// 将 ModInfo 转换为 Mod 对象（用于表格显示）
+const displayMods = computed<Mod[]>(() => {
+  if (!config.value) return []
+
+  return mods.value.map((modInfo, index) => {
+    const configItem = config.value!.mods.find(m => m.name === modInfo.name)
+    return {
+      name: modInfo.name,
+      nexusId: modInfo.nexusId,
+      categories: modInfo.categories,
+      enabled: modInfo.enabled,
+      fileSize: modInfo.fileSize,
+      installDate: modInfo.installDate,
+      order: configItem?.order ?? index + 1,
+      hasConflict: false, // TODO: 实现冲突检测
+      conflictWith: [],
+    }
+  }).sort((a, b) => a.order - b.order)
+})
 
 onMounted(async () => {
   await loadConfig()
   // 如果没有设置游戏目录，显示设置对话框
   if (!config.value?.gameDirectory) {
     showSetupDialog.value = true
+  } else {
+    // 加载 MOD 列表
+    await loadAllMods()
   }
 })
 
@@ -34,10 +59,38 @@ async function handleSaveDirectory() {
     const newConfig = { ...config.value, gameDirectory: selectedPath.value }
     await saveConfig(newConfig)
     showSetupDialog.value = false
+    // 加载 MOD 列表
+    await loadAllMods()
   }
   catch (e) {
     console.error('保存配置失败:', e)
   }
+}
+
+// MOD 操作处理
+function handleToggleEnable(mod: Mod) {
+  console.log('切换启用状态:', mod.name)
+  // TODO: 实现启用/禁用功能
+}
+
+function handleEdit(mod: Mod) {
+  console.log('编辑 MOD:', mod.name)
+  // TODO: 实现编辑功能
+}
+
+function handleUninstall(mod: Mod) {
+  console.log('卸载 MOD:', mod.name)
+  // TODO: 实现卸载功能
+}
+
+function handleDelete(mod: Mod) {
+  console.log('删除 MOD:', mod.name)
+  // TODO: 实现删除功能
+}
+
+function handleInstallMod() {
+  console.log('安装 MOD')
+  // TODO: 打开安装对话框
 }
 </script>
 
@@ -72,7 +125,9 @@ async function handleSaveDirectory() {
         <!-- 操作栏 -->
         <div class="flex items-center justify-between">
           <div class="flex gap-2">
-            <Button>安装 MOD</Button>
+            <Button @click="handleInstallMod">
+              安装 MOD
+            </Button>
             <Button variant="outline">
               设置
             </Button>
@@ -83,11 +138,14 @@ async function handleSaveDirectory() {
         </div>
 
         <!-- MOD 列表表格 -->
-        <div class="rounded-md border">
-          <div class="p-8 text-center text-muted-foreground">
-            暂无 MOD，点击"安装 MOD"开始添加
-          </div>
-        </div>
+        <ModTable
+          :mods="displayMods"
+          :loading="loading"
+          @toggle-enable="handleToggleEnable"
+          @edit="handleEdit"
+          @uninstall="handleUninstall"
+          @delete="handleDelete"
+        />
       </div>
     </main>
 
