@@ -2,19 +2,24 @@
 import { ref, onMounted, computed } from 'vue'
 import "@/style.css"
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import ModTable from '@/components/ModTable.vue'
+import ModInstallDialog from '@/components/ModInstallDialog.vue'
 import { useModManager } from './composables/useModManager'
 import type { Mod } from '@/types/mod'
 
-const { config, mods, loading, loadConfig, saveConfig, loadAllMods, selectGameDirectory, enableMod, disableMod, deleteMod } = useModManager()
+const { config, mods, loading, loadConfig, saveConfig, loadAllMods, selectGameDirectory, installMod, enableMod, disableMod, deleteMod } = useModManager()
 const showSetupDialog = ref(false)
+const showInstallDialog = ref(false)
 const selectedPath = ref('')
+const searchQuery = ref('')
+const selectedCategory = ref<string>('')
 
 // 将 ModInfo 转换为 Mod 对象（用于表格显示）
 const displayMods = computed<Mod[]>(() => {
   if (!config.value) return []
 
-  return mods.value.map((modInfo, index) => {
+  let filtered = mods.value.map((modInfo, index) => {
     const configItem = config.value!.mods.find(m => m.name === modInfo.name)
     return {
       name: modInfo.name,
@@ -27,7 +32,25 @@ const displayMods = computed<Mod[]>(() => {
       hasConflict: false, // TODO: 实现冲突检测
       conflictWith: [],
     }
-  }).sort((a, b) => a.order - b.order)
+  })
+
+  // 按名称搜索
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(mod =>
+      mod.name.toLowerCase().includes(query),
+    )
+  }
+
+  // 按分类过滤
+  if (selectedCategory.value && selectedCategory.value !== '') {
+    filtered = filtered.filter(mod =>
+      mod.categories.includes(selectedCategory.value),
+    )
+  }
+
+  // 按 order 排序
+  return filtered.sort((a, b) => a.order - b.order)
 })
 
 onMounted(async () => {
@@ -123,9 +146,51 @@ async function handleDelete(mod: Mod) {
   }
 }
 
+// MOD 拖拽排序处理
+async function handleReorder(reorderedMods: Mod[]) {
+  if (!config.value) return
+
+  try {
+    // 更新配置中的 MOD 顺序
+    const newConfig = {
+      ...config.value,
+      mods: reorderedMods.map(mod => ({
+        name: mod.name,
+        order: mod.order,
+        enabled: mod.enabled,
+      })),
+    }
+
+    await saveConfig(newConfig)
+    // 重新加载 MOD 列表以反映新的排序
+    await loadAllMods()
+  }
+  catch (e) {
+    console.error('更新排序失败:', e)
+    alert(`更新排序失败: ${e}`)
+  }
+}
+
 function handleInstallMod() {
-  console.log('安装 MOD')
-  // TODO: 打开安装对话框
+  showInstallDialog.value = true
+}
+
+async function handleInstall(data: {
+  archivePath: string
+  modName: string
+  nexusId: string | undefined
+  categories: string[]
+}) {
+  try {
+    await installMod(data.archivePath, data.modName, data.nexusId, data.categories)
+    showInstallDialog.value = false
+    await loadAllMods()
+    alert('MOD 安装成功！')
+  }
+  catch (e) {
+    console.error('安装失败:', e)
+    alert(`安装失败: ${e}`)
+  }
 }
 </script>
 
@@ -158,7 +223,7 @@ function handleInstallMod() {
 
       <div v-else class="space-y-6">
         <!-- 操作栏 -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-4">
           <div class="flex gap-2">
             <Button @click="handleInstallMod">
               安装 MOD
@@ -172,6 +237,35 @@ function handleInstallMod() {
           </div>
         </div>
 
+        <!-- 搜索和过滤栏 -->
+        <div class="flex items-center gap-4">
+          <div class="flex-1">
+            <Input
+              v-model="searchQuery"
+              placeholder="搜索 MOD 名称..."
+              class="max-w-md"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-muted-foreground">分类:</span>
+            <select
+              v-model="selectedCategory"
+              class="px-3 py-2 border rounded-md bg-background text-sm"
+            >
+              <option value="">
+                全部
+              </option>
+              <option
+                v-for="category in config.categories"
+                :key="category.name"
+                :value="category.name"
+              >
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
         <!-- MOD 列表表格 -->
         <ModTable
           :mods="displayMods"
@@ -180,9 +274,18 @@ function handleInstallMod() {
           @edit="handleEdit"
           @uninstall="handleUninstall"
           @delete="handleDelete"
+          @reorder="handleReorder"
         />
       </div>
     </main>
+
+    <!-- MOD 安装对话框 -->
+    <ModInstallDialog
+      :show="showInstallDialog"
+      :categories="config?.categories || []"
+      @close="showInstallDialog = false"
+      @install="handleInstall"
+    />
 
     <!-- 设置游戏目录对话框 -->
     <div

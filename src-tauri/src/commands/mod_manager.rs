@@ -139,7 +139,7 @@ pub fn install_mod(
 /// 启用 MOD（复制到游戏目录）
 #[tauri::command]
 pub fn enable_mod(app: AppHandle, mod_name: String) -> Result<OperationResult, String> {
-    use crate::commands::config::{get_data_dir, load_config, save_mod_info};
+    use crate::commands::config::{load_config, save_mod_info};
     use crate::commands::file_ops::copy_mod_to_game;
 
     // 1. 加载配置
