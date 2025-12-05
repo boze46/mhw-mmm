@@ -287,9 +287,20 @@ function getCategoryColor(category: string): string {
 
 .drag-handle {
   cursor: grab;
+  user-select: none;
 }
 
 .drag-handle:active {
   cursor: grabbing;
+}
+
+/* 禁止拖拽时选中文字 */
+:deep(tr) {
+  user-select: none;
+}
+
+/* 但允许在操作列中选中文字（如复制 Nexus ID） */
+:deep(tr td:last-child) {
+  user-select: auto;
 }
 </style>
