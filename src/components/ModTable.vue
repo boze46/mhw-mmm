@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import Sortable from 'sortablejs'
 import {
   Table,
   TableBody,
@@ -25,7 +26,52 @@ const emit = defineEmits<{
   edit: [mod: Mod]
   uninstall: [mod: Mod]
   delete: [mod: Mod]
+  reorder: [mods: Mod[]]
 }>()
+
+const tableBodyRef = ref<HTMLElement | null>(null)
+let sortableInstance: Sortable | null = null
+
+// 初始化拖拽排序
+onMounted(() => {
+  initSortable()
+})
+
+// 当 mods 变化时重新初始化（因为 DOM 可能重新渲染）
+watch(() => props.mods, () => {
+  if (sortableInstance) {
+    sortableInstance.destroy()
+  }
+  initSortable()
+}, { deep: true })
+
+function initSortable() {
+  if (!tableBodyRef.value || props.mods.length === 0) return
+
+  sortableInstance = new Sortable(tableBodyRef.value, {
+    animation: 150,
+    handle: '.drag-handle',
+    ghostClass: 'sortable-ghost',
+    dragClass: 'sortable-drag',
+    onEnd: (evt) => {
+      if (evt.oldIndex === undefined || evt.newIndex === undefined) return
+      if (evt.oldIndex === evt.newIndex) return
+
+      // 创建新的排序数组
+      const newMods = [...props.mods]
+      const [movedMod] = newMods.splice(evt.oldIndex, 1)
+      newMods.splice(evt.newIndex, 0, movedMod)
+
+      // 更新 order 字段
+      const reorderedMods = newMods.map((mod, index) => ({
+        ...mod,
+        order: index + 1,
+      }))
+
+      emit('reorder', reorderedMods)
+    },
+  })
+}
 
 // 格式化文件大小
 function formatFileSize(bytes: number): string {
@@ -105,11 +151,11 @@ function getCategoryColor(category: string): string {
             </TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
+        <TableBody ref="tableBodyRef">
           <TableRow v-for="mod in mods" :key="mod.name">
             <!-- 排序拖拽手柄 -->
             <TableCell>
-              <div class="flex items-center justify-center cursor-move">
+              <div class="flex items-center justify-center cursor-move drag-handle">
                 <svg
                   class="w-5 h-5 text-muted-foreground"
                   fill="none"
@@ -227,3 +273,23 @@ function getCategoryColor(category: string): string {
     </div>
   </div>
 </template>
+
+<style scoped>
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f3f4f6;
+}
+
+.sortable-drag {
+  opacity: 1;
+  cursor: grabbing !important;
+}
+
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+</style>
