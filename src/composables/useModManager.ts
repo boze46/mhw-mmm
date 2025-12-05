@@ -114,7 +114,16 @@ export function useModManager() {
     try {
       loading.value = true
       error.value = null
-      return await invoke<string>('select_game_directory')
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({
+        title: '选择 Monster Hunter World 游戏目录',
+        directory: true,
+        multiple: false,
+      })
+      if (!selected) {
+        throw new Error('未选择目录')
+      }
+      return selected as string
     }
     catch (e) {
       error.value = String(e)
@@ -132,7 +141,20 @@ export function useModManager() {
     try {
       loading.value = true
       error.value = null
-      return await invoke<string>('select_archive_file')
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({
+        title: '选择 MOD 压缩包',
+        directory: false,
+        multiple: false,
+        filters: [{
+          name: '压缩包',
+          extensions: ['zip', 'rar', '7z', 'tar.gz'],
+        }],
+      })
+      if (!selected) {
+        throw new Error('未选择文件')
+      }
+      return selected as string
     }
     catch (e) {
       error.value = String(e)

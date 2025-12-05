@@ -19,8 +19,6 @@ pub fn run() {
             commands::load_mod_info,
             commands::save_mod_info,
             commands::load_all_mods,
-            commands::select_game_directory,
-            commands::select_archive_file,
             commands::preview_zip_archive,
             commands::extract_zip_archive,
             commands::copy_mod_to_game,
