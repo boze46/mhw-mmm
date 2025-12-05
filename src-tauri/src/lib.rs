@@ -1,3 +1,6 @@
+mod models;
+mod commands;
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -8,7 +11,17 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::load_config,
+            commands::save_config,
+            commands::load_mod_info,
+            commands::save_mod_info,
+            commands::load_all_mods,
+            commands::select_game_directory,
+            commands::select_archive_file,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
