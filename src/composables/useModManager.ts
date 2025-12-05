@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import { ref } from 'vue'
-import type { AppConfig, ModInfo, OperationResult } from '@/types/mod'
+import type { AppConfig, ModInfo, OperationResult, ArchivePreview } from '@/types/mod'
 
 /**
  * MOD 管理器 Composable
@@ -143,6 +143,106 @@ export function useModManager() {
     }
   }
 
+  /**
+   * 预览压缩包内容
+   */
+  async function previewArchive(archivePath: string) {
+    try {
+      loading.value = true
+      error.value = null
+      return await invoke<ArchivePreview>('preview_zip_archive', { archivePath })
+    }
+    catch (e) {
+      error.value = String(e)
+      throw e
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 安装 MOD
+   */
+  async function installMod(
+    archivePath: string,
+    modName: string,
+    nexusId: string | undefined,
+    categories: string[],
+  ) {
+    try {
+      loading.value = true
+      error.value = null
+      return await invoke<OperationResult>('install_mod', {
+        archivePath,
+        modName,
+        nexusId: nexusId || undefined,
+        categories,
+      })
+    }
+    catch (e) {
+      error.value = String(e)
+      throw e
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 启用 MOD
+   */
+  async function enableMod(modName: string) {
+    try {
+      loading.value = true
+      error.value = null
+      return await invoke<OperationResult>('enable_mod', { modName })
+    }
+    catch (e) {
+      error.value = String(e)
+      throw e
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 禁用 MOD
+   */
+  async function disableMod(modName: string) {
+    try {
+      loading.value = true
+      error.value = null
+      return await invoke<OperationResult>('disable_mod', { modName })
+    }
+    catch (e) {
+      error.value = String(e)
+      throw e
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * 删除 MOD
+   */
+  async function deleteMod(modName: string) {
+    try {
+      loading.value = true
+      error.value = null
+      return await invoke<OperationResult>('delete_mod', { modName })
+    }
+    catch (e) {
+      error.value = String(e)
+      throw e
+    }
+    finally {
+      loading.value = false
+    }
+  }
+
   return {
     config,
     mods,
@@ -155,5 +255,10 @@ export function useModManager() {
     saveModInfo,
     selectGameDirectory,
     selectArchiveFile,
+    previewArchive,
+    installMod,
+    enableMod,
+    disableMod,
+    deleteMod,
   }
 }

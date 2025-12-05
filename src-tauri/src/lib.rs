@@ -27,6 +27,10 @@ pub fn run() {
             commands::remove_mod_from_game,
             commands::delete_directory,
             commands::get_directory_size,
+            commands::install_mod,
+            commands::enable_mod,
+            commands::disable_mod,
+            commands::delete_mod,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -6,7 +6,7 @@ import ModTable from '@/components/ModTable.vue'
 import { useModManager } from './composables/useModManager'
 import type { Mod } from '@/types/mod'
 
-const { config, mods, loading, loadConfig, saveConfig, loadAllMods, selectGameDirectory } = useModManager()
+const { config, mods, loading, loadConfig, saveConfig, loadAllMods, selectGameDirectory, enableMod, disableMod, deleteMod } = useModManager()
 const showSetupDialog = ref(false)
 const selectedPath = ref('')
 
@@ -68,24 +68,59 @@ async function handleSaveDirectory() {
 }
 
 // MOD 操作处理
-function handleToggleEnable(mod: Mod) {
-  console.log('切换启用状态:', mod.name)
-  // TODO: 实现启用/禁用功能
+async function handleToggleEnable(mod: Mod) {
+  try {
+    if (mod.enabled) {
+      await disableMod(mod.name)
+    }
+    else {
+      await enableMod(mod.name)
+    }
+    // 重新加载 MOD 列表
+    await loadAllMods()
+  }
+  catch (e) {
+    console.error('切换启用状态失败:', e)
+    alert(`操作失败: ${e}`)
+  }
 }
 
 function handleEdit(mod: Mod) {
   console.log('编辑 MOD:', mod.name)
   // TODO: 实现编辑功能
+  alert('编辑功能待实现')
 }
 
-function handleUninstall(mod: Mod) {
-  console.log('卸载 MOD:', mod.name)
-  // TODO: 实现卸载功能
+async function handleUninstall(mod: Mod) {
+  try {
+    if (!confirm(`确定要卸载 MOD "${mod.name}" 吗？\n文件将从游戏目录移除，但保留在数据目录中。`)) {
+      return
+    }
+
+    await disableMod(mod.name)
+    await loadAllMods()
+    alert('MOD 已卸载')
+  }
+  catch (e) {
+    console.error('卸载失败:', e)
+    alert(`卸载失败: ${e}`)
+  }
 }
 
-function handleDelete(mod: Mod) {
-  console.log('删除 MOD:', mod.name)
-  // TODO: 实现删除功能
+async function handleDelete(mod: Mod) {
+  try {
+    if (!confirm(`确定要删除 MOD "${mod.name}" 吗？\n此操作不可撤销！`)) {
+      return
+    }
+
+    await deleteMod(mod.name)
+    await loadAllMods()
+    alert('MOD 已删除')
+  }
+  catch (e) {
+    console.error('删除失败:', e)
+    alert(`删除失败: ${e}`)
+  }
 }
 
 function handleInstallMod() {
